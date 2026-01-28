@@ -1,0 +1,140 @@
+CS 101 - Introduction to Computer Science
+Fall 2024
+
+Instructor: Dr. Jane Smith
+Email: jsmith@example.edu
+Office: Science Building, Room 301
+Office Hours: Tuesdays and Thursdays, 2:00 PM - 4:00 PM
+
+Teaching Assistants:
+- John Doe (johnd@example.edu) - Labs on Monday/Wednesday
+- Sarah Johnson (sarahj@example.edu) - Labs on Tuesday/Thursday
+
+Course Description:
+This course provides a comprehensive introduction to computer science and programming. Students will learn fundamental programming concepts, problem-solving techniques, and computational thinking skills using Python as the primary programming language.
+
+Learning Objectives:
+By the end of this course, students will be able to:
+1. Write programs using variables, data types, and operators
+2. Implement control flow structures (conditionals, loops)
+3. Design and implement functions
+4. Work with data structures (lists, dictionaries)
+5. Apply object-oriented programming concepts
+6. Debug and test code effectively
+
+Required Materials:
+- Textbook: "Introduction to Programming with Python" by John Zelle (3rd Edition)
+- Computer with Python 3.9+ installed
+- Access to the course website on Canvas
+
+Grading Policy:
+Your final grade will be calculated as follows:
+
+| Component       | Weight |
+|-----------------|--------|
+| Homework        | 25%    |
+| Labs            | 15%    |
+| Quizzes         | 10%    |
+| Midterm Exam    | 20%    |
+| Final Exam      | 25%    |
+| Participation   | 5%     |
+
+Note: The lowest homework grade and two lowest quiz grades will be dropped.
+
+Grade Scale:
+A: 93-100%
+A-: 90-92%
+B+: 87-89%
+B: 83-86%
+B-: 80-82%
+C+: 77-79%
+C: 73-76%
+C-: 70-72%
+D+: 67-69%
+D: 63-66%
+D-: 60-62%
+F: Below 60%
+
+Homework Assignments:
+All homework assignments are due at 11:59 PM on the due date. Submit through Canvas.
+
+- Homework 1: Variables and Data Types - Due September 10
+- Homework 2: Control Flow - Due September 24
+- Homework 3: Functions - Due October 8
+- Homework 4: Data Structures - Due October 22
+- Homework 5: Object-Oriented Programming - Due November 5
+
+Lab Schedule:
+Labs meet weekly and are due at 4:00 PM on the due date.
+
+- Lab 1: Setting Up Your Environment - Due September 5
+- Lab 2: Basic Programming - Due September 12
+- Lab 3: Debugging - Due September 26
+- Lab 4: File I/O - Due October 10
+- Lab 5: Final Project Setup - Due November 14
+
+Quizzes:
+Short quizzes will be given during class time:
+
+- Quiz 1: September 13
+- Quiz 2: September 27
+- Quiz 3: October 11
+- Quiz 4: October 25
+- Quiz 5: November 8
+- Quiz 6: November 22
+
+Exams:
+- Midterm Exam: October 15, 2:00 PM - 3:30 PM (in class)
+- Final Exam: December 10, 10:00 AM - 12:00 PM (Room TBA)
+
+Extra Credit Opportunities:
+- Attend Programming Workshop: Up to 2% added to final grade
+- Programming Competition Participation: Up to 3% added to final grade
+
+Late Work Policy:
+Late assignments will be penalized 10% per day for up to 3 days. After 3 days, the assignment will receive a 0 unless you have made prior arrangements with the instructor.
+
+Attendance Policy:
+Attendance is mandatory for all labs and exams. If you must miss a lab due to illness or emergency, please contact your TA as soon as possible. Missing more than 3 unexcused labs will result in a 5% deduction from your final grade.
+
+Academic Integrity:
+All work submitted must be your own. Plagiarism, cheating, or any form of academic dishonesty will result in a 0 on the assignment and may lead to further disciplinary action according to university policy.
+
+Collaboration is encouraged for homework assignments - you may discuss problems with classmates. However, you must write your own code independently. Copying code directly from another student or from the internet without attribution is considered cheating.
+
+Exam Policy:
+- No electronic devices (phones, smartwatches, etc.) are allowed during exams
+- Bring a basic calculator if needed
+- For the final exam only: One 8.5" x 11" sheet of handwritten notes (both sides) is permitted
+
+Makeup Policy:
+Makeup exams will only be given with prior approval or in the case of a documented emergency. Contact the instructor as soon as possible if you will miss an exam.
+
+Communication:
+- Course announcements will be posted on Canvas
+- Use Canvas messaging or email for questions
+- Allow 24-48 hours for email responses (longer on weekends)
+
+Schedule (Subject to Change):
+
+Week 1 (Sept 2-6): Introduction to Python, Variables
+Week 2 (Sept 9-13): Data Types, Input/Output
+Week 3 (Sept 16-20): Conditionals
+Week 4 (Sept 23-27): Loops
+Week 5 (Sept 30-Oct 4): Functions Part 1
+Week 6 (Oct 7-11): Functions Part 2
+Week 7 (Oct 14-18): MIDTERM EXAM (Oct 15)
+Week 8 (Oct 21-25): Lists
+Week 9 (Oct 28-Nov 1): Dictionaries
+Week 10 (Nov 4-8): File I/O
+Week 11 (Nov 11-15): Object-Oriented Programming Part 1
+Week 12 (Nov 18-22): Object-Oriented Programming Part 2
+Week 13 (Nov 25-29): THANKSGIVING BREAK (No Class)
+Week 14 (Dec 2-6): Review
+Week 15: FINAL EXAM (Dec 10)
+
+Accommodations:
+Students with disabilities who need accommodations should contact the Office of Disability Services and provide documentation to the instructor within the first two weeks of class.
+
+---
+This syllabus is subject to change. Students will be notified of any changes via Canvas announcement.

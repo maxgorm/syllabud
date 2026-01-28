@@ -1,0 +1,335 @@
+{
+  "course": {
+    "title": "Introduction to Computer Science",
+    "institution": "Example University",
+    "term": "Fall 2024",
+    "instructor": "Dr. Jane Smith",
+    "source": {
+      "url": "https://example.edu/cs101/syllabus",
+      "type": "html"
+    }
+  },
+  "grading": {
+    "schemeType": "weighted",
+    "categories": [
+      {
+        "id": "homework",
+        "name": "Homework",
+        "weight": 25,
+        "dropLowest": 1,
+        "assignments": [
+          {
+            "id": "hw1",
+            "title": "Homework 1: Variables and Data Types",
+            "pointsPossible": 100,
+            "dueDate": "2024-09-10",
+            "dueTime": "23:59"
+          },
+          {
+            "id": "hw2",
+            "title": "Homework 2: Control Flow",
+            "pointsPossible": 100,
+            "dueDate": "2024-09-24",
+            "dueTime": "23:59"
+          },
+          {
+            "id": "hw3",
+            "title": "Homework 3: Functions",
+            "pointsPossible": 100,
+            "dueDate": "2024-10-08",
+            "dueTime": "23:59"
+          },
+          {
+            "id": "hw4",
+            "title": "Homework 4: Data Structures",
+            "pointsPossible": 100,
+            "dueDate": "2024-10-22",
+            "dueTime": "23:59"
+          },
+          {
+            "id": "hw5",
+            "title": "Homework 5: Object-Oriented Programming",
+            "pointsPossible": 100,
+            "dueDate": "2024-11-05",
+            "dueTime": "23:59"
+          }
+        ]
+      },
+      {
+        "id": "labs",
+        "name": "Labs",
+        "weight": 15,
+        "dropLowest": 0,
+        "assignments": [
+          {
+            "id": "lab1",
+            "title": "Lab 1: Setting Up Your Environment",
+            "pointsPossible": 50,
+            "dueDate": "2024-09-05",
+            "dueTime": "16:00"
+          },
+          {
+            "id": "lab2",
+            "title": "Lab 2: Basic Programming",
+            "pointsPossible": 50,
+            "dueDate": "2024-09-12",
+            "dueTime": "16:00"
+          },
+          {
+            "id": "lab3",
+            "title": "Lab 3: Debugging",
+            "pointsPossible": 50,
+            "dueDate": "2024-09-26",
+            "dueTime": "16:00"
+          },
+          {
+            "id": "lab4",
+            "title": "Lab 4: File I/O",
+            "pointsPossible": 50,
+            "dueDate": "2024-10-10",
+            "dueTime": "16:00"
+          },
+          {
+            "id": "lab5",
+            "title": "Lab 5: Final Project Setup",
+            "pointsPossible": 50,
+            "dueDate": "2024-11-14",
+            "dueTime": "16:00"
+          }
+        ]
+      },
+      {
+        "id": "quizzes",
+        "name": "Quizzes",
+        "weight": 10,
+        "dropLowest": 2,
+        "assignments": [
+          {
+            "id": "quiz1",
+            "title": "Quiz 1",
+            "pointsPossible": 20,
+            "dueDate": "2024-09-13"
+          },
+          {
+            "id": "quiz2",
+            "title": "Quiz 2",
+            "pointsPossible": 20,
+            "dueDate": "2024-09-27"
+          },
+          {
+            "id": "quiz3",
+            "title": "Quiz 3",
+            "pointsPossible": 20,
+            "dueDate": "2024-10-11"
+          },
+          {
+            "id": "quiz4",
+            "title": "Quiz 4",
+            "pointsPossible": 20,
+            "dueDate": "2024-10-25"
+          },
+          {
+            "id": "quiz5",
+            "title": "Quiz 5",
+            "pointsPossible": 20,
+            "dueDate": "2024-11-08"
+          },
+          {
+            "id": "quiz6",
+            "title": "Quiz 6",
+            "pointsPossible": 20,
+            "dueDate": "2024-11-22"
+          }
+        ]
+      },
+      {
+        "id": "midterm",
+        "name": "Midterm Exam",
+        "weight": 20,
+        "assignments": [
+          {
+            "id": "midterm_exam",
+            "title": "Midterm Exam",
+            "pointsPossible": 100,
+            "dueDate": "2024-10-15",
+            "dueTime": "14:00",
+            "isExam": true
+          }
+        ]
+      },
+      {
+        "id": "final_exam",
+        "name": "Final Exam",
+        "weight": 25,
+        "assignments": [
+          {
+            "id": "final",
+            "title": "Final Exam",
+            "pointsPossible": 150,
+            "dueDate": "2024-12-10",
+            "dueTime": "10:00",
+            "isExam": true
+          }
+        ]
+      },
+      {
+        "id": "participation",
+        "name": "Participation",
+        "weight": 5,
+        "assignments": []
+      }
+    ],
+    "extraCredit": [
+      {
+        "id": "ec_workshop",
+        "title": "Attend Programming Workshop",
+        "type": "percentage_add",
+        "percentageValue": 2
+      },
+      {
+        "id": "ec_competition",
+        "title": "Programming Competition Participation",
+        "type": "percentage_add",
+        "percentageValue": 3
+      }
+    ],
+    "letterGradeScale": [
+      { "letter": "A", "min": 93 },
+      { "letter": "A-", "min": 90 },
+      { "letter": "B+", "min": 87 },
+      { "letter": "B", "min": 83 },
+      { "letter": "B-", "min": 80 },
+      { "letter": "C+", "min": 77 },
+      { "letter": "C", "min": 73 },
+      { "letter": "C-", "min": 70 },
+      { "letter": "D+", "min": 67 },
+      { "letter": "D", "min": 63 },
+      { "letter": "D-", "min": 60 },
+      { "letter": "F", "min": 0 }
+    ],
+    "gotchas": {
+      "hasDropLowest": true,
+      "hasExtraCredit": true,
+      "hasMultipleSchemes": false,
+      "warnings": [
+        "Lowest homework grade will be dropped",
+        "Two lowest quiz grades will be dropped"
+      ]
+    }
+  },
+  "assignments": [
+    {
+      "id": "hw1",
+      "title": "Homework 1: Variables and Data Types",
+      "category": "Homework",
+      "dueDate": "2024-09-10",
+      "dueTime": "23:59",
+      "pointsPossible": 100,
+      "weight": 5,
+      "isExam": false
+    },
+    {
+      "id": "hw2",
+      "title": "Homework 2: Control Flow",
+      "category": "Homework",
+      "dueDate": "2024-09-24",
+      "dueTime": "23:59",
+      "pointsPossible": 100,
+      "weight": 5,
+      "isExam": false
+    },
+    {
+      "id": "hw3",
+      "title": "Homework 3: Functions",
+      "category": "Homework",
+      "dueDate": "2024-10-08",
+      "dueTime": "23:59",
+      "pointsPossible": 100,
+      "weight": 5,
+      "isExam": false
+    },
+    {
+      "id": "hw4",
+      "title": "Homework 4: Data Structures",
+      "category": "Homework",
+      "dueDate": "2024-10-22",
+      "dueTime": "23:59",
+      "pointsPossible": 100,
+      "weight": 5,
+      "isExam": false
+    },
+    {
+      "id": "hw5",
+      "title": "Homework 5: Object-Oriented Programming",
+      "category": "Homework",
+      "dueDate": "2024-11-05",
+      "dueTime": "23:59",
+      "pointsPossible": 100,
+      "weight": 5,
+      "isExam": false
+    },
+    {
+      "id": "midterm_exam",
+      "title": "Midterm Exam",
+      "category": "Midterm Exam",
+      "dueDate": "2024-10-15",
+      "dueTime": "14:00",
+      "pointsPossible": 100,
+      "weight": 20,
+      "isExam": true
+    },
+    {
+      "id": "final",
+      "title": "Final Exam",
+      "category": "Final Exam",
+      "dueDate": "2024-12-10",
+      "dueTime": "10:00",
+      "pointsPossible": 150,
+      "weight": 25,
+      "isExam": true
+    },
+    {
+      "id": "project",
+      "title": "Final Project",
+      "category": null,
+      "dueDate": null,
+      "description": "Details TBD",
+      "isExam": false
+    }
+  ],
+  "policies": {
+    "late_work": "Late assignments will be penalized 10% per day for up to 3 days. Assignments more than 3 days late will receive a 0.",
+    "attendance": "Attendance is mandatory for labs and exams. Missing more than 3 unexcused labs will result in a 5% deduction from your final grade.",
+    "academic_integrity": "All work must be your own. Plagiarism or cheating will result in a 0 on the assignment and may lead to further disciplinary action.",
+    "exam_policy": "No electronic devices are allowed during exams. Bring a calculator if needed. One 8.5x11 sheet of notes (both sides) is permitted for the final exam.",
+    "collaboration": "Collaboration is encouraged for homework assignments, but you must write your own code. Copying code directly from another student is considered cheating.",
+    "makeup_policy": "Makeup exams will only be given with prior approval or documented emergency. Contact the instructor as soon as possible.",
+    "office_hours": "Office hours are held Tuesdays and Thursdays 2-4 PM in Room 301. Additional appointments can be made via email."
+  },
+  "raw": {
+    "extractedText": "[Sample extracted text would be here]",
+    "chunks": [
+      {
+        "id": "chunk_0",
+        "text": "CS 101 - Introduction to Computer Science. Fall 2024. Instructor: Dr. Jane Smith. This course provides a comprehensive introduction to computer science concepts..."
+      },
+      {
+        "id": "chunk_1",
+        "text": "Grading Policy: Homework (25%), Labs (15%), Quizzes (10%), Midterm (20%), Final Exam (25%), Participation (5%). The lowest homework grade and two lowest quiz grades will be dropped..."
+      },
+      {
+        "id": "chunk_2",
+        "text": "Late Work Policy: Late assignments will be penalized 10% per day for up to 3 days. Assignments more than 3 days late will receive a 0..."
+      }
+    ]
+  },
+  "userGrades": {},
+  "settings": {
+    "treatUnfilledAs": 100,
+    "ics": {
+      "defaultReminderMinutes": 1440
+    }
+  },
+  "createdAt": 1704067200000,
+  "updatedAt": 1704067200000
+}

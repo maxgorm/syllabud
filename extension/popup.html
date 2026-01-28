@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SyllaBud</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading State -->
+    <div id="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <!-- Dashboard / Home View -->
+    <div id="dashboard" class="dashboard-container" style="display: none;">
+      <header class="dashboard-header">
+        <h1 class="app-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          SyllaBud
+        </h1>
+      </header>
+
+      <!-- Analyze Current Page Button - Always Visible -->
+      <div class="analyze-section">
+        <button id="btn-analyze-page" class="btn btn-primary btn-large">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          Analyze This Page
+        </button>
+        <p class="analyze-hint">Works with any syllabus: webpages, PDFs, Canvas, Google Docs</p>
+      </div>
+
+      <!-- Course List -->
+      <div class="dashboard-section">
+        <h2 class="section-title">
+          <span>Your Courses</span>
+          <span id="course-count" class="course-count">0</span>
+        </h2>
+        
+        <div id="dashboard-course-list" class="dashboard-course-list">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Paste Fallback (Collapsed) -->
+      <details class="paste-section">
+        <summary>Or paste syllabus text manually</summary>
+        <div class="paste-content">
+          <textarea id="paste-text" placeholder="Paste syllabus text here..."></textarea>
+          <button id="btn-analyze-paste" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            Analyze Pasted Text
+          </button>
+        </div>
+      </details>
+    </div>
+
+    <!-- Main Course View -->
+    <div id="course-view" class="course-container" style="display: none;">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button id="btn-back-home" class="btn-icon btn-back" title="Back to Dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div class="header-titles">
+            <h1 id="course-title">Course Name</h1>
+            <span id="course-term" class="term-badge"></span>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="grade-display">
+            <span id="current-grade" class="grade-value">--</span>
+            <span id="letter-grade" class="letter-grade">-</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <button id="btn-analyze-page-course" class="btn btn-sm btn-accent" title="Analyze current page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          Analyze Page
+        </button>
+        <button id="btn-reanalyze" class="btn btn-sm" title="Re-analyze syllabus">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          Re-analyze
+        </button>
+        <button id="btn-export-ics" class="btn btn-sm" title="Export calendar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Export .ics
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <nav class="tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="grades">Grades</button>
+        <button class="tab" data-tab="due-dates">Due Dates</button>
+        <button class="tab" data-tab="policies">Policies</button>
+        <button class="tab" data-tab="chat">Chat</button>
+      </nav>
+
+      <!-- Tab Content -->
+      <main class="tab-content">
+        <!-- Overview Tab -->
+        <section id="tab-overview" class="tab-panel active">
+          <div class="info-card">
+            <h3>Course Information</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Instructor</label>
+                <span id="info-instructor">-</span>
+              </div>
+              <div class="info-item">
+                <label>Institution</label>
+                <span id="info-institution">-</span>
+              </div>
+              <div class="info-item">
+                <label>Term</label>
+                <span id="info-term">-</span>
+              </div>
+              <div class="info-item">
+                <label>Grading Type</label>
+                <span id="info-grading-type">-</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <h3>Grade Breakdown</h3>
+            <div id="grade-breakdown" class="grade-breakdown">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+          
+          <div class="info-card">
+            <h3>Upcoming</h3>
+            <div id="upcoming-list" class="upcoming-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Grades Tab -->
+        <section id="tab-grades" class="tab-panel">
+          <div class="grades-header">
+            <div class="what-if-toggle">
+              <label class="toggle">
+                <input type="checkbox" id="what-if-mode">
+                <span class="toggle-slider"></span>
+              </label>
+              <span>What-if Mode</span>
+            </div>
+            <button id="btn-reset-grades" class="btn btn-sm btn-ghost">Reset All</button>
+          </div>
+          
+          <div id="grades-container" class="grades-container">
+            <!-- Populated by JS -->
+          </div>
+          
+          <div class="grade-target">
+            <label>Target Grade:</label>
+            <select id="target-grade">
+              <option value="90">A (90%)</option>
+              <option value="80">B (80%)</option>
+              <option value="70">C (70%)</option>
+              <option value="60">D (60%)</option>
+            </select>
+            <span id="needed-grade" class="needed-grade"></span>
+          </div>
+        </section>
+
+        <!-- Due Dates Tab -->
+        <section id="tab-due-dates" class="tab-panel">
+          <div class="due-dates-header">
+            <div class="filter-buttons">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+              <button class="filter-btn" data-filter="past">Past</button>
+              <button class="filter-btn" data-filter="tbd">TBD</button>
+            </div>
+          </div>
+          
+          <div id="due-dates-list" class="due-dates-list">
+            <!-- Populated by JS -->
+          </div>
+          
+          <div class="ics-options">
+            <label class="checkbox-label">
+              <input type="checkbox" id="include-tbd">
+              Include TBD items in calendar export
+            </label>
+          </div>
+        </section>
+
+        <!-- Policies Tab -->
+        <section id="tab-policies" class="tab-panel">
+          <div id="policies-container" class="policies-container">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- Chat Tab -->
+        <section id="tab-chat" class="tab-panel">
+          <div id="chat-messages" class="chat-messages">
+            <div class="chat-welcome">
+              <p>👋 Hi! Ask me anything about this syllabus.</p>
+              <div class="quick-questions">
+                <button class="quick-q">What's the grading policy?</button>
+                <button class="quick-q">When is the final exam?</button>
+                <button class="quick-q">What's the late work policy?</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Ask about the syllabus...">
+            <button id="btn-send-chat" class="btn btn-primary btn-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Analyzing Modal -->
+    <div id="analyzing-modal" class="modal" style="display: none;">
+      <div class="modal-content modal-small">
+        <div class="analyzing-content">
+          <div class="spinner"></div>
+          <h3>Analyzing Syllabus...</h3>
+          <p id="analyzing-status">Extracting text from page</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel" style="display: none;">
+      <div class="settings-header">
+        <h3>Settings</h3>
+        <button id="close-settings" class="btn-icon">&times;</button>
+      </div>
+      <div class="settings-content">
+        <div class="setting-item">
+          <label>Treat unfilled grades as:</label>
+          <input type="number" id="setting-unfilled" value="100" min="0" max="100">%
+        </div>
+        <div class="setting-item">
+          <label>Default reminder:</label>
+          <select id="setting-reminder">
+            <option value="60">1 hour before</option>
+            <option value="1440" selected>1 day before</option>
+            <option value="2880">2 days before</option>
+            <option value="10080">1 week before</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Backend URL:</label>
+          <input type="text" id="setting-backend" value="http://localhost:3000">
+        </div>
+        <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button id="btn-settings" class="btn-icon" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+      <span class="version">SyllaBud v1.0</span>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>
