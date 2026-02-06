@@ -6,7 +6,7 @@
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -22,7 +22,7 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 // Initialize Gemini AI
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Token tracking per IP (in-memory, resets on server restart)
 const tokenUsage = new Map();
@@ -336,12 +336,10 @@ ${text.substring(0, 50000)}
 
 Remember: Output ONLY the JSON object, nothing else.`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
-    contents: prompt
-  });
-  
-  const responseText = response.text || '';
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const responseText = response.text();
   
   // Try to parse JSON from response
   let parsed;
@@ -390,12 +388,10 @@ Context: This was supposed to be a ${context || 'structured data'} response.
 
 Return ONLY the fixed JSON, no explanations.`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
-    contents: prompt
-  });
-  
-  const responseText = response.text || '';
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const responseText = response.text();
   
   // Clean and parse
   let cleanJson = responseText
@@ -461,14 +457,14 @@ STUDENT QUESTION: ${question}
 
 Provide a helpful, accurate response based on the syllabus information above.`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
-    contents: prompt
-  });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const responseText = response.text();
   
   return {
-    answer: response.text || 'I could not generate a response.',
-    citations: extractCitations(response.text || '')
+    answer: responseText || 'I could not generate a response.',
+    citations: extractCitations(responseText || '')
   };
 }
 

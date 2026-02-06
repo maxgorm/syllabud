@@ -255,23 +255,48 @@ function calculateCourseGrade(course) {
 
     for (const cat of grading.categories) {
       const assignments = cat.assignments || [];
-      let catTotal = 0;
-      let catCount = 0;
+      const categoryId = cat.id || cat.name;
+      let catAvg = null;
 
-      for (const a of assignments) {
-        const id = a.id || a.title;
-        const grade = userGrades[id];
-        
-        if (grade !== undefined && grade !== null && grade !== '') {
-          catTotal += parseFloat(grade);
+      if (assignments.length === 0) {
+        // No assignments - check for direct category grade
+        const directGrade = userGrades[categoryId];
+        if (directGrade !== undefined && directGrade !== null && directGrade !== '') {
+          catAvg = parseFloat(directGrade);
         } else {
-          catTotal += treatUnfilledAs;
+          catAvg = treatUnfilledAs;
         }
-        catCount++;
+      } else {
+        // Has assignments - calculate average
+        let catTotal = 0;
+        let catCount = 0;
+
+        for (const a of assignments) {
+          const id = a.id || a.title;
+          const grade = userGrades[id];
+          
+          let gradeValue;
+          if (grade !== undefined && grade !== null && grade !== '') {
+            gradeValue = parseFloat(grade);
+            
+            // Convert to percentage if points-based
+            if (a.pointsPossible && a.pointsPossible > 0) {
+              gradeValue = (gradeValue / a.pointsPossible) * 100;
+            }
+          } else {
+            gradeValue = treatUnfilledAs;
+          }
+          
+          catTotal += gradeValue;
+          catCount++;
+        }
+
+        if (catCount > 0) {
+          catAvg = catTotal / catCount;
+        }
       }
 
-      if (catCount > 0) {
-        const catAvg = catTotal / catCount;
+      if (catAvg !== null) {
         const weight = parseFloat(cat.weight) || 0;
         totalWeight += weight;
         earnedWeight += (catAvg / 100) * weight;
@@ -643,34 +668,63 @@ function renderGradesTab() {
 
   const html = categories.map(cat => {
     const assignments = cat.assignments || [];
-    const assignmentHtml = assignments.map(a => {
-      const id = a.id || a.title;
-      const value = currentCourse.userGrades?.[id] || '';
-      const maxPoints = a.pointsPossible ? ` / ${a.pointsPossible}` : '';
-      
-      return `
+    const categoryId = cat.id || cat.name;
+    
+    let contentHtml = '';
+    
+    if (assignments.length === 0) {
+      // No assignments - show a single category-level grade input
+      const value = currentCourse.userGrades?.[categoryId] || '';
+      contentHtml = `
         <div class="grade-item">
-          <span class="grade-item-name">${a.title || 'Untitled'}</span>
+          <span class="grade-item-name">Overall ${cat.name} Grade</span>
           <input type="number" 
                  class="grade-item-input" 
-                 data-id="${id}" 
+                 data-id="${categoryId}" 
                  value="${value}" 
                  placeholder="--"
                  min="0" 
-                 max="100">
-          <span class="grade-item-max">${maxPoints}</span>
+                 max="100"
+                 step="0.1">
+          <span class="grade-item-max">%</span>
         </div>
       `;
-    }).join('');
+    } else {
+      // Has assignments - show each assignment
+      contentHtml = assignments.map(a => {
+        const id = a.id || a.title;
+        const value = currentCourse.userGrades?.[id] || '';
+        const maxPoints = a.pointsPossible ? ` / ${a.pointsPossible}` : '%';
+        
+        return `
+          <div class="grade-item">
+            <span class="grade-item-name">${a.title || 'Untitled'}</span>
+            <input type="number" 
+                   class="grade-item-input" 
+                   data-id="${id}" 
+                   value="${value}" 
+                   placeholder="--"
+                   min="0" 
+                   ${a.pointsPossible ? `max="${a.pointsPossible}"` : 'max="100"'}
+                   step="0.1">
+            <span class="grade-item-max">${maxPoints}</span>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Calculate category average for display
+    const catGrade = calculateCategoryAverage(cat, currentCourse.userGrades || {});
+    const catGradeDisplay = catGrade !== null ? catGrade.toFixed(1) + '%' : '--';
 
     return `
       <div class="grade-category-section expanded">
         <div class="grade-category-header">
           <h4>${cat.name || 'Unnamed'} (${cat.weight || 0}%)</h4>
-          <span class="category-grade">--</span>
+          <span class="category-grade">${catGradeDisplay}</span>
         </div>
         <div class="grade-items">
-          ${assignmentHtml || '<p class="empty-text">No assignments</p>'}
+          ${contentHtml}
         </div>
       </div>
     `;
@@ -682,6 +736,53 @@ function renderGradesTab() {
   elements.gradesContainer.querySelectorAll('.grade-item-input').forEach(input => {
     input.addEventListener('change', handleGradeInput);
   });
+}
+
+/**
+ * Calculate category average from user grades
+ */
+function calculateCategoryAverage(category, userGrades) {
+  const assignments = category.assignments || [];
+  const categoryId = category.id || category.name;
+  const treatUnfilledAs = settings.treatUnfilledAs || 100;
+  
+  // If no assignments, check for direct category grade
+  if (assignments.length === 0) {
+    const directGrade = userGrades[categoryId];
+    if (directGrade !== undefined && directGrade !== null && directGrade !== '') {
+      return parseFloat(directGrade);
+    }
+    return null; // No grade entered yet
+  }
+  
+  // Calculate average from assignments
+  let total = 0;
+  let count = 0;
+  let hasAnyGrade = false;
+  
+  for (const assignment of assignments) {
+    const id = assignment.id || assignment.title;
+    const grade = userGrades[id];
+    
+    if (grade !== undefined && grade !== null && grade !== '') {
+      hasAnyGrade = true;
+      let gradeValue = parseFloat(grade);
+      
+      // Convert to percentage if points-based
+      if (assignment.pointsPossible && assignment.pointsPossible > 0) {
+        gradeValue = (gradeValue / assignment.pointsPossible) * 100;
+      }
+      
+      total += gradeValue;
+      count++;
+    } else {
+      // Use treatUnfilledAs for empty grades
+      total += treatUnfilledAs;
+      count++;
+    }
+  }
+  
+  return count > 0 ? total / count : null;
 }
 
 /**
@@ -711,7 +812,19 @@ async function handleGradeInput(e) {
     }
   });
 
+  // Update grade display and re-render to show updated category averages
   updateGradeDisplay();
+  
+  // Update just the category grade displays without full re-render
+  const categories = currentCourse?.grading?.categories || [];
+  categories.forEach((cat, index) => {
+    const catGrade = calculateCategoryAverage(cat, currentCourse.userGrades || {});
+    const catGradeDisplay = catGrade !== null ? catGrade.toFixed(1) + '%' : '--';
+    const categoryHeaders = elements.gradesContainer.querySelectorAll('.category-grade');
+    if (categoryHeaders[index]) {
+      categoryHeaders[index].textContent = catGradeDisplay;
+    }
+  });
 }
 
 /**
