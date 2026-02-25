@@ -66,6 +66,8 @@ function setupEventListeners() {
   document.getElementById('btn-analyze-page')?.addEventListener('click', analyzeCurrentPage);
   document.getElementById('btn-analyze-paste')?.addEventListener('click', analyzePastedText);
 
+
+  // Open file picker when clicked
   document.getElementById('btn-analyze-file')?.addEventListener('click', () => {
     elements.fileUpload.click(); // open file picker
   });
@@ -595,7 +597,7 @@ async function analyzePastedText() {
 }
 
 /**
- * Analyze uploaded file
+ * Analyze uploaded file -- Nick 2/25
  */
 async function analyzeUploadedFile() {
   const file = elements.fileUpload.files[0];
@@ -658,8 +660,10 @@ async function analyzeUploadedFile() {
   }
 }
 
+
+
 /**
- * Extract text from uploaded file
+ * Extract text from uploaded file -- Nick 2/25
  */
 async function extractTextFromUploadedFile(file) {
   const name = file.name.toLowerCase();
