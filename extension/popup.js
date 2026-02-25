@@ -48,7 +48,9 @@ function cacheElements() {
   elements.courseCount = document.getElementById('course-count');
   elements.analyzingModal = document.getElementById('analyzing-modal');
   elements.analyzingStatus = document.getElementById('analyzing-status');
+  elements.fileUpload = document.getElementById('fileUpload');
 }
+
 
 /**
  * Setup event listeners
@@ -59,9 +61,16 @@ function setupEventListeners() {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
+
   // Dashboard buttons
   document.getElementById('btn-analyze-page')?.addEventListener('click', analyzeCurrentPage);
   document.getElementById('btn-analyze-paste')?.addEventListener('click', analyzePastedText);
+
+  document.getElementById('btn-analyze-file')?.addEventListener('click', () => {
+    elements.fileUpload.click(); // open file picker
+  });
+
+  elements.fileUpload?.addEventListener('change', analyzeUploadedFile);
   
   // Course view buttons
   document.getElementById('btn-back-home')?.addEventListener('click', showDashboard);
@@ -75,6 +84,8 @@ function setupEventListeners() {
   document.getElementById('btn-settings')?.addEventListener('click', showSettings);
   document.getElementById('close-settings')?.addEventListener('click', hideSettings);
   document.getElementById('btn-save-settings')?.addEventListener('click', saveSettings);
+
+
 
   // Chat input
   elements.chatInput?.addEventListener('keypress', (e) => {
@@ -582,6 +593,95 @@ async function analyzePastedText() {
     alert('Analysis failed: ' + error.message);
   }
 }
+
+/**
+ * Analyze uploaded file
+ */
+async function analyzeUploadedFile() {
+  const file = elements.fileUpload.files[0];
+  if (!file) return;
+
+  try {
+    showAnalyzingModal('Reading file...');
+
+    const extractedText = await extractTextFromUploadedFile(file);
+
+    if (!extractedText || extractedText.length < 100) {
+      throw new Error('Not enough text found in file');
+    }
+
+    updateAnalyzingStatus('Analyzing syllabus with AI...');
+
+    const analyzeResult = await chrome.runtime.sendMessage({
+      action: 'ANALYZE_SYLLABUS',
+      data: {
+        extractedText,
+        url: file.name
+      }
+    });
+
+    if (!analyzeResult.success) {
+      throw new Error(analyzeResult.error || 'Analysis failed');
+    }
+
+    updateAnalyzingStatus('Saving course data...');
+
+    const courseData = {
+      id: `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...analyzeResult.data,
+      raw: {
+        extractedText,
+        chunks: [],
+        sourceUrl: file.name
+      },
+      userGrades: {},
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    await chrome.runtime.sendMessage({
+      action: 'SAVE_COURSE',
+      data: courseData
+    });
+
+    await loadAllCourses();
+    currentCourse = courseData;
+
+    hideAnalyzingModal();
+    showCourseView();
+
+  } catch (error) {
+    hideAnalyzingModal();
+    alert('File analysis failed: ' + error.message);
+  } finally {
+    elements.fileUpload.value = ''; // reset input
+  }
+}
+
+/**
+ * Extract text from uploaded file
+ */
+async function extractTextFromUploadedFile(file) {
+  const name = file.name.toLowerCase();
+
+  // TXT files
+  if (name.endsWith('.txt')) {
+    return file.text();
+  }
+
+  // DOCX / PDF placeholder (temporary simple read)
+  // Replace later with real parser (pdf.js / mammoth)
+  if (name.endsWith('.pdf') || name.endsWith('.docx') || name.endsWith('.doc')) {
+    const buffer = await file.arrayBuffer();
+
+    // naive text decode (works for some files, not all)
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(buffer);
+  }
+
+  throw new Error('Unsupported file type');
+}
+
 
 /**
  * Re-analyze syllabus

@@ -50,8 +50,15 @@
         </div>
       </div>
 
-      <!-- Paste Fallback (Collapsed) -->
-      <details class="paste-section">
+      <div class="analyze-section">
+        <input type="file" id="fileUpload" accept=".pdf,.docx,.doc" style="display:none" />
+        <button class="btn btn-primary btn-large" id="btn-analyze-file">
+              Upload & Analyze File
+        </button>
+      </div>
+
+      <!-- Paste Fallback (Collapsed)      -->
+       <details class="paste-section">
         <summary>Or paste syllabus text manually</summary>
         <div class="paste-content">
           <textarea id="paste-text" placeholder="Paste syllabus text here..."></textarea>
@@ -299,6 +306,7 @@
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </button>
+      <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
       <span class="version">SyllaBud v1.0</span>
     </footer>
   </div>
