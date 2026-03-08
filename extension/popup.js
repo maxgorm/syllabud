@@ -3,6 +3,13 @@
  * Main UI controller for the extension popup
  */
 
+// Initialize PDF.js
+import * as pdfjsLib from "./libs/pdf.mjs";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  chrome.runtime.getURL("libs/pdf.worker.mjs");
+
+
 // State
 let currentCourse = null;
 let allCourses = [];
@@ -660,30 +667,34 @@ async function analyzeUploadedFile() {
   }
 }
 
+async function extractPdfText(file) {
+  const buffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+  let text = "";
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+
+    const pageText = content.items.map(item => item.str).join(" ");
+    text += pageText + "\n";
+  }
+
+  return text;
+}
 
 
-/**
- * Extract text from uploaded file -- Nick 2/25
- */
+
 async function extractTextFromUploadedFile(file) {
   const name = file.name.toLowerCase();
 
-  // TXT files
-  if (name.endsWith('.txt')) {
-    return file.text();
+  if (name.endsWith(".pdf")) {
+    return extractPdfText(file);
   }
 
-  // DOCX / PDF placeholder (temporary simple read)
-  // Replace later with real parser (pdf.js / mammoth)
-  if (name.endsWith('.pdf') || name.endsWith('.docx') || name.endsWith('.doc')) {
-    const buffer = await file.arrayBuffer();
-
-    // naive text decode (works for some files, not all)
-    const decoder = new TextDecoder('utf-8');
-    return decoder.decode(buffer);
-  }
-
-  throw new Error('Unsupported file type');
+  throw new Error("Only PDF supported right now");
 }
 
 
