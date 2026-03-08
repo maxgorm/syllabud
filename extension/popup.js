@@ -685,6 +685,15 @@ async function extractPdfText(file) {
   return text;
 }
 
+async function extractDocxText(file) {
+  const buffer = await file.arrayBuffer();
+
+  const result = await window.mammoth.extractRawText({
+    arrayBuffer: buffer
+  });
+
+  return result.value;
+}
 
 
 async function extractTextFromUploadedFile(file) {
@@ -694,8 +703,13 @@ async function extractTextFromUploadedFile(file) {
     return extractPdfText(file);
   }
 
-  throw new Error("Only PDF supported right now");
+  if (name.endsWith(".docx")) {
+    return extractDocxText(file);
+  }
+
+  throw new Error("Only PDF or DOCX supported right now");
 }
+
 
 
 /**
