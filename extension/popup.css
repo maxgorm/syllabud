@@ -42,7 +42,15 @@ body {
   font-size: 14px;
   color: var(--gray-800);
   background: var(--gray-50);
-  overflow: hidden;
+  overflow: auto;
+}
+
+
+#dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto; /* this makes the whole dashboard scrollable */
 }
 
 #app {
