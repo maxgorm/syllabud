@@ -9,6 +9,9 @@
 /**
  * Storage helper functions (inline for service worker)
  */
+const DEFAULT_BACKEND_URL = 'https://syllabud-worker.gabepush.workers.dev';
+const LEGACY_BACKEND_URLS = new Set(['http://localhost:3000']);
+
 const StorageHelper = {
   async get(key) {
     const result = await chrome.storage.local.get(key);
@@ -21,11 +24,15 @@ const StorageHelper = {
   
   async getSettings() {
     const settings = await this.get('syllabud_settings');
+    const backendUrl = settings?.backendUrl && !LEGACY_BACKEND_URLS.has(settings.backendUrl)
+      ? settings.backendUrl
+      : DEFAULT_BACKEND_URL;
+
     return {
       treatUnfilledAs: 100,
       ics: { defaultReminderMinutes: 1440 },
-      backendUrl: 'http://localhost:3000',
-      ...settings
+      ...settings,
+      backendUrl
     };
   }
 };

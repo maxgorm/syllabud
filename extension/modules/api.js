@@ -4,7 +4,7 @@
  */
 
 // Default backend URL (can be overridden in settings)
-let BACKEND_URL = 'http://localhost:3000';
+let BACKEND_URL = 'https://syllabud-worker.gabepush.workers.dev';
 
 /**
  * Set the backend URL
