@@ -28,14 +28,37 @@
 
       <!-- Analyze Current Page Button - Always Visible -->
       <div class="analyze-section">
-        <button id="btn-analyze-page" class="btn btn-primary btn-large">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          Analyze This Page
-        </button>
-        <p class="analyze-hint">Works with any syllabus: webpages, PDFs, Canvas, Google Docs</p>
+        <div class="primary-actions">
+          <button id="btn-analyze-page" class="btn btn-primary btn-large">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            Analyze This Page
+          </button>
+          <button id="btn-upload-file" class="btn btn-secondary btn-large">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 5 17 10"></polyline>
+              <line x1="12" y1="5" x2="12" y2="16"></line>
+            </svg>
+            Upload File
+          </button>
+          <input id="syllabus-file-input" type="file" accept=".txt,.md,.html,.htm,.json,text/plain,text/markdown,text/html,application/json" hidden>
+        </div>
+        <details class="paste-section paste-section-inline">
+          <summary>Paste Text</summary>
+          <div class="paste-content">
+            <textarea id="paste-text" placeholder="Paste syllabus text here..."></textarea>
+            <button id="btn-analyze-paste" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              Analyze Pasted Text
+            </button>
+          </div>
+        </details>
       </div>
 
       <!-- Course List -->
@@ -50,20 +73,6 @@
         </div>
       </div>
 
-      <!-- Paste Fallback (Collapsed) -->
-      <details class="paste-section">
-        <summary>Or paste syllabus text manually</summary>
-        <div class="paste-content">
-          <textarea id="paste-text" placeholder="Paste syllabus text here..."></textarea>
-          <button id="btn-analyze-paste" class="btn btn-primary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-            Analyze Pasted Text
-          </button>
-        </div>
-      </details>
     </div>
 
     <!-- Main Course View -->
@@ -96,7 +105,7 @@
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
-          Analyze Page
+          Update From Page
         </button>
         <button id="btn-reanalyze" class="btn btn-sm" title="Re-analyze syllabus">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -122,7 +131,6 @@
         <button class="tab active" data-tab="overview">Overview</button>
         <button class="tab" data-tab="grades">Grades</button>
         <button class="tab" data-tab="due-dates">Due Dates</button>
-        <button class="tab" data-tab="policies">Policies</button>
         <button class="tab" data-tab="chat">Chat</button>
       </nav>
 
@@ -162,6 +170,16 @@
           <div class="info-card">
             <h3>Upcoming</h3>
             <div id="upcoming-list" class="upcoming-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="section-heading">
+              <h3>Key Policies</h3>
+              <span class="section-caption">Most important syllabus rules</span>
+            </div>
+            <div id="policies-container" class="policies-container">
               <!-- Populated by JS -->
             </div>
           </div>
@@ -216,13 +234,6 @@
               <input type="checkbox" id="include-tbd">
               Include TBD items in calendar export
             </label>
-          </div>
-        </section>
-
-        <!-- Policies Tab -->
-        <section id="tab-policies" class="tab-panel">
-          <div id="policies-container" class="policies-container">
-            <!-- Populated by JS -->
           </div>
         </section>
 
@@ -283,10 +294,6 @@
             <option value="10080">1 week before</option>
           </select>
         </div>
-        <div class="setting-item">
-          <label>Backend URL:</label>
-          <input type="text" id="setting-backend" value="http://localhost:3000">
-        </div>
         <button id="btn-save-settings" class="btn btn-primary">Save Settings</button>
       </div>
     </div>
@@ -299,7 +306,7 @@
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
         </svg>
       </button>
-      <span class="version">SyllaBud v1.0</span>
+      <span class="version">SyllaBud v1.0.2</span>
     </footer>
   </div>
 
