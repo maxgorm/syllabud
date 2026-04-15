@@ -8,6 +8,19 @@ let currentCourse = null;
 let allCourses = [];
 let settings = {};
 let chatHistory = [];
+let isAnalyzing = false;
+
+const MIN_SYLLABUS_LENGTH = 100;
+const MAX_CHAT_HISTORY = 12;
+
+const INTERNAL_RESPONSE_LABELS = [
+  'RAW SYLLABUS EXCERPT',
+  'SUPPORTING SYLLABUS TEXT',
+  'RETRIEVED SYLLABUS EVIDENCE',
+  'STRUCTURED COURSE DATA',
+  'RECENT CONVERSATION',
+  'STUDENT CURRENT GRADES'
+];
 
 // DOM Elements
 const elements = {};
@@ -43,6 +56,7 @@ function cacheElements() {
   elements.chatInput = document.getElementById('chat-input');
   elements.settingsPanel = document.getElementById('settings-panel');
   elements.pasteText = document.getElementById('paste-text');
+  elements.fileInput = document.getElementById('syllabus-file-input');
   elements.neededGrade = document.getElementById('needed-grade');
   elements.dashboardCourseList = document.getElementById('dashboard-course-list');
   elements.courseCount = document.getElementById('course-count');
@@ -61,11 +75,13 @@ function setupEventListeners() {
 
   // Dashboard buttons
   document.getElementById('btn-analyze-page')?.addEventListener('click', analyzeCurrentPage);
+  document.getElementById('btn-upload-file')?.addEventListener('click', () => elements.fileInput?.click());
   document.getElementById('btn-analyze-paste')?.addEventListener('click', analyzePastedText);
+  elements.fileInput?.addEventListener('change', analyzeUploadedFile);
   
   // Course view buttons
   document.getElementById('btn-back-home')?.addEventListener('click', showDashboard);
-  document.getElementById('btn-analyze-page-course')?.addEventListener('click', analyzeCurrentPage);
+  document.getElementById('btn-analyze-page-course')?.addEventListener('click', () => analyzeCurrentPage({ replaceExisting: true }));
   document.getElementById('btn-reanalyze')?.addEventListener('click', reanalyzeSyllabus);
   document.getElementById('btn-export-ics')?.addEventListener('click', exportICS);
   document.getElementById('btn-reset-grades')?.addEventListener('click', resetGrades);
@@ -117,7 +133,6 @@ async function loadSettings() {
     settings = response.data;
     document.getElementById('setting-unfilled').value = settings.treatUnfilledAs || 100;
     document.getElementById('setting-reminder').value = settings.ics?.defaultReminderMinutes || 1440;
-    document.getElementById('setting-backend').value = settings.backendUrl || 'http://localhost:3000';
   }
 }
 
@@ -129,8 +144,7 @@ async function saveSettings() {
     treatUnfilledAs: parseInt(document.getElementById('setting-unfilled').value) || 100,
     ics: {
       defaultReminderMinutes: parseInt(document.getElementById('setting-reminder').value) || 1440
-    },
-    backendUrl: document.getElementById('setting-backend').value || 'http://localhost:3000'
+    }
   };
 
   const response = await chrome.runtime.sendMessage({
@@ -194,6 +208,7 @@ function renderDashboardCourses() {
     const grade = calculateCourseGrade(course);
     const gradeDisplay = grade.grade !== null ? `${grade.grade.toFixed(0)}%` : '--';
     const letterDisplay = grade.letterGrade || '';
+    const metaParts = [course.course?.term, course.course?.instructor].filter(Boolean);
     
     return `
       <div class="dashboard-course-card" data-id="${course.id}">
@@ -201,7 +216,7 @@ function renderDashboardCourses() {
           <div class="course-card-icon">📚</div>
           <div class="course-card-info">
             <div class="course-card-title">${course.course?.title || 'Untitled Course'}</div>
-            <div class="course-card-meta">${course.course?.term || ''} • ${course.course?.instructor || 'Unknown Instructor'}</div>
+            <div class="course-card-meta">${metaParts.join(' • ')}</div>
           </div>
           <div class="course-card-grade">
             <span class="grade-percent">${gradeDisplay}</span>
@@ -320,6 +335,7 @@ async function openCourse(courseId) {
   if (!course) return;
 
   currentCourse = course;
+  syncChatHistoryFromCourse();
   
   // Set as active course
   await chrome.runtime.sendMessage({
@@ -360,11 +376,19 @@ function showCourseView() {
   renderCourse();
 }
 
+function syncChatHistoryFromCourse() {
+  chatHistory = Array.isArray(currentCourse?.chatHistory)
+    ? currentCourse.chatHistory.slice(-MAX_CHAT_HISTORY)
+    : [];
+}
+
 /**
  * Render course data
  */
 function renderCourse() {
   if (!currentCourse) return;
+
+  syncChatHistoryFromCourse();
 
   // Header
   elements.courseTitle.textContent = currentCourse.course?.title || 'Untitled Course';
@@ -383,6 +407,7 @@ function renderCourse() {
   renderGradesTab();
   renderDueDates();
   renderPolicies();
+  renderChatHistory();
 }
 
 /**
@@ -425,78 +450,23 @@ function getLetterGrade(percentage) {
 /**
  * Analyze current page
  */
-async function analyzeCurrentPage() {
-  showAnalyzingModal('Extracting text from page...');
-
+async function analyzeCurrentPage(options = {}) {
   try {
-    // Get current tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
-    if (!tab) {
-      throw new Error('No active tab found');
-    }
+    const extractResult = await extractCurrentPage();
+    const { extractedText, chunks = [], url, pageType = 'html', error: extractError } = extractResult;
 
-    // Extract text from page
-    updateAnalyzingStatus('Extracting text from page...');
-    const extractResult = await chrome.runtime.sendMessage({
-      action: 'EXTRACT_TEXT',
-      data: { tabId: tab.id }
-    });
-
-    if (!extractResult.success) {
-      throw new Error(extractResult.error || 'Failed to extract text');
-    }
-
-    const { extractedText, chunks, url, error: extractError } = extractResult.data;
-
-    // Handle PDF native viewer case
     if (extractError === 'PDF_NATIVE_VIEWER') {
-      throw new Error('Cannot extract text from this PDF directly. Please either:\n\n1. Copy the PDF text and paste it in the "paste manually" section\n2. Open the PDF in a different viewer\n3. Try the PDF on a webpage that displays its content');
+      throw new Error('Cannot extract text from this PDF directly. Copy the PDF text into the manual paste area or open it in a text-accessible viewer.');
     }
 
-    if (!extractedText || extractedText.length < 100) {
-      throw new Error('Not enough text found on this page. Try a different page or paste the syllabus manually.');
-    }
-
-    // Analyze with AI
-    updateAnalyzingStatus('Analyzing syllabus with AI...');
-    const analyzeResult = await chrome.runtime.sendMessage({
-      action: 'ANALYZE_SYLLABUS',
-      data: { extractedText, url }
+    await analyzeSource({
+      extractedText,
+      url,
+      chunks,
+      pageType,
+      existingCourse: options.replaceExisting ? currentCourse : null,
+      progressLabel: options.replaceExisting ? 'Refreshing syllabus from current page...' : 'Analyzing current page...'
     });
-
-    if (!analyzeResult.success) {
-      throw new Error(analyzeResult.error || 'Analysis failed');
-    }
-
-    // Create course object
-    updateAnalyzingStatus('Saving course data...');
-    const courseData = {
-      id: `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...analyzeResult.data,
-      raw: {
-        extractedText,
-        chunks: chunks || [],
-        sourceUrl: url
-      },
-      userGrades: {},
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    // Save course
-    await chrome.runtime.sendMessage({
-      action: 'SAVE_COURSE',
-      data: courseData
-    });
-
-    // Refresh courses and open the new one
-    await loadAllCourses();
-    currentCourse = courseData;
-    
-    hideAnalyzingModal();
-    showCourseView();
-
   } catch (error) {
     hideAnalyzingModal();
     alert('Analysis failed: ' + error.message);
@@ -525,47 +495,86 @@ function hideAnalyzingModal() {
   elements.analyzingModal.style.display = 'none';
 }
 
-/**
- * Analyze pasted text
- */
-async function analyzePastedText() {
-  const text = elements.pasteText?.value.trim();
-  
-  if (!text || text.length < 100) {
-    alert('Please paste more syllabus text (at least 100 characters)');
-    return;
+async function extractCurrentPage() {
+  showAnalyzingModal('Extracting text from page...');
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) {
+    throw new Error('No active tab found');
   }
 
-  showAnalyzingModal('Analyzing pasted text...');
+  const extractResult = await chrome.runtime.sendMessage({
+    action: 'EXTRACT_TEXT',
+    data: { tabId: tab.id }
+  });
+
+  if (!extractResult.success) {
+    throw new Error(extractResult.error || 'Failed to extract text');
+  }
+
+  const data = extractResult.data || {};
+  if (!data.extractedText || data.extractedText.length < MIN_SYLLABUS_LENGTH) {
+    throw new Error('Not enough text found on this page. Try a different page, upload a syllabus file, or paste the syllabus manually.');
+  }
+
+  return data;
+}
+
+async function analyzeSource({
+  extractedText,
+  url,
+  chunks = [],
+  pageType = 'html',
+  existingCourse = null,
+  progressLabel = 'Analyzing syllabus...'
+}) {
+  if (isAnalyzing) {
+    throw new Error('An analysis is already in progress.');
+  }
+
+  if (!extractedText || extractedText.length < MIN_SYLLABUS_LENGTH) {
+    throw new Error(`Syllabus text must be at least ${MIN_SYLLABUS_LENGTH} characters.`);
+  }
+
+  isAnalyzing = true;
+  showAnalyzingModal(progressLabel);
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const normalizedChunks = chunks.length > 0 ? chunks : createTextChunks(extractedText);
+
+    updateAnalyzingStatus('Sending syllabus to AI...');
+    const analyzeResult = await chrome.runtime.sendMessage({
       action: 'ANALYZE_SYLLABUS',
-      data: {
-        extractedText: text,
-        url: 'pasted-text'
-      }
+      data: { extractedText, url }
     });
 
-    if (!response.success) {
-      throw new Error(response.error || 'Analysis failed');
+    if (!analyzeResult.success) {
+      throw new Error(analyzeResult.error || 'Analysis failed');
     }
 
-    // Create course
+    updateAnalyzingStatus(existingCourse ? 'Updating course...' : 'Saving course...');
+
     const courseData = {
-      id: `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...response.data,
+      ...(existingCourse || {}),
+      ...analyzeResult.data,
+      id: existingCourse?.id || `course_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       raw: {
-        extractedText: text,
-        chunks: [],
-        sourceUrl: 'pasted-text'
+        extractedText,
+        chunks: normalizedChunks,
+        sourceUrl: url
       },
-      userGrades: {},
-      createdAt: Date.now(),
+      userGrades: existingCourse?.userGrades || {},
+      chatHistory: existingCourse?.chatHistory || [],
+      createdAt: existingCourse?.createdAt || Date.now(),
       updatedAt: Date.now()
     };
 
-    // Save
+    courseData.course = {
+      ...(existingCourse?.course || {}),
+      ...(courseData.course || {})
+    };
+    courseData.course.source = { url, type: pageType };
+
     await chrome.runtime.sendMessage({
       action: 'SAVE_COURSE',
       data: courseData
@@ -573,13 +582,125 @@ async function analyzePastedText() {
 
     await loadAllCourses();
     currentCourse = courseData;
-    
+    syncChatHistoryFromCourse();
     hideAnalyzingModal();
     showCourseView();
+  } finally {
+    isAnalyzing = false;
+  }
+}
+
+async function readUploadedFile(file) {
+  const fileName = file.name || 'uploaded file';
+  const extension = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
+  const supportedTextExtensions = new Set(['txt', 'md', 'markdown', 'html', 'htm', 'json']);
+
+  if (!supportedTextExtensions.has(extension)) {
+    throw new Error('Upload supports TXT, MD, HTML, and JSON syllabus files. For PDFs, open the file in the browser and use Analyze This Page.');
+  }
+
+  const rawText = await file.text();
+  let normalizedText = rawText;
+
+  if (extension === 'html' || extension === 'htm') {
+    const doc = new DOMParser().parseFromString(rawText, 'text/html');
+    normalizedText = doc.body?.innerText || doc.body?.textContent || rawText;
+  }
+
+  if (extension === 'json') {
+    try {
+      normalizedText = JSON.stringify(JSON.parse(rawText), null, 2);
+    } catch {
+      normalizedText = rawText;
+    }
+  }
+
+  normalizedText = normalizedText.replace(/\r\n/g, '\n').trim();
+
+  if (normalizedText.length < MIN_SYLLABUS_LENGTH) {
+    throw new Error(`"${fileName}" does not contain enough readable syllabus text.`);
+  }
+
+  return normalizedText;
+}
+
+function createTextChunks(text, maxChars = 1200, overlapWords = 20) {
+  const cleanedText = (text || '').replace(/\s+/g, ' ').trim();
+  if (!cleanedText) return [];
+
+  const sentences = cleanedText.split(/(?<=[.!?])\s+/);
+  const chunks = [];
+  let currentChunk = '';
+
+  sentences.forEach((sentence) => {
+    if ((currentChunk + ' ' + sentence).trim().length > maxChars && currentChunk) {
+      chunks.push({
+        id: `chunk_${chunks.length}`,
+        text: currentChunk.trim()
+      });
+
+      const overlap = currentChunk.split(' ').slice(-overlapWords).join(' ');
+      currentChunk = `${overlap} ${sentence}`.trim();
+    } else {
+      currentChunk = `${currentChunk} ${sentence}`.trim();
+    }
+  });
+
+  if (currentChunk) {
+    chunks.push({
+      id: `chunk_${chunks.length}`,
+      text: currentChunk.trim()
+    });
+  }
+
+  return chunks;
+}
+
+/**
+ * Analyze pasted text
+ */
+async function analyzePastedText() {
+  const text = elements.pasteText?.value.trim();
+  
+  if (!text || text.length < MIN_SYLLABUS_LENGTH) {
+    alert('Please paste more syllabus text (at least 100 characters)');
+    return;
+  }
+
+  try {
+    await analyzeSource({
+      extractedText: text,
+      url: 'pasted-text',
+      chunks: [],
+      pageType: 'pasted-text',
+      progressLabel: 'Analyzing pasted text...'
+    });
+    elements.pasteText.value = '';
 
   } catch (error) {
     hideAnalyzingModal();
     alert('Analysis failed: ' + error.message);
+  }
+}
+
+async function analyzeUploadedFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const extractedText = await readUploadedFile(file);
+    await analyzeSource({
+      extractedText,
+      url: `upload://${file.name}`,
+      chunks: [],
+      pageType: 'upload',
+      progressLabel: `Analyzing ${file.name}...`
+    });
+  } catch (error) {
+    hideAnalyzingModal();
+    alert('Upload failed: ' + error.message);
+  } finally {
+    event.target.value = '';
   }
 }
 
@@ -588,7 +709,7 @@ async function analyzePastedText() {
  */
 async function reanalyzeSyllabus() {
   if (!confirm('Re-analyze will fetch fresh data from the current page. Continue?')) return;
-  await analyzeCurrentPage();
+  await analyzeCurrentPage({ replaceExisting: true });
 }
 
 /**
@@ -946,19 +1067,27 @@ function filterDueDates(filter) {
  */
 function renderPolicies() {
   const policies = currentCourse?.policies || {};
-  const policyKeys = Object.keys(policies).filter(k => policies[k]);
+  const policyKeys = Object.keys(policies)
+    .filter((key) => policies[key])
+    .sort((a, b) => {
+      const priority = ['late_work', 'exam_policy', 'attendance', 'makeup_policy', 'academic_integrity', 'collaboration', 'other'];
+      const aIndex = priority.indexOf(a);
+      const bIndex = priority.indexOf(b);
+      return (aIndex === -1 ? priority.length : aIndex) - (bIndex === -1 ? priority.length : bIndex);
+    })
+    .slice(0, 4);
   
   if (policyKeys.length === 0) {
     elements.policiesContainer.innerHTML = '<p class="empty-text">No policies extracted</p>';
     return;
   }
 
-  const html = policyKeys.map(key => {
+  const html = policyKeys.map((key) => {
     const value = policies[key];
-    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
     
     return `
-      <div class="policy-card expanded">
+      <div class="policy-card compact">
         <div class="policy-header">
           <h4>${displayKey}</h4>
         </div>
@@ -981,6 +1110,72 @@ function switchTab(tabId) {
   document.getElementById(`tab-${tabId}`)?.classList.add('active');
 }
 
+function renderChatHistory() {
+  if (!elements.chatMessages) return;
+
+  elements.chatMessages.innerHTML = `
+    <div class="chat-welcome"${chatHistory.length > 0 ? ' style="display: none;"' : ''}>
+      <p>Ask me anything about this syllabus.</p>
+      <div class="quick-questions">
+        <button class="quick-q">What's the grading policy?</button>
+        <button class="quick-q">When is the final exam?</button>
+        <button class="quick-q">What's the late work policy?</button>
+      </div>
+    </div>
+  `;
+
+  chatHistory.forEach((message) => {
+    addChatMessage(sanitizeChatText(message.content), message.role);
+  });
+
+  elements.chatMessages.querySelectorAll('.quick-q').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      elements.chatInput.value = btn.textContent;
+      sendChatMessage();
+    });
+  });
+}
+
+async function persistChatHistory() {
+  if (!currentCourse) return;
+
+  currentCourse.chatHistory = chatHistory
+    .slice(-MAX_CHAT_HISTORY)
+    .map((message) => ({
+      ...message,
+      content: sanitizeChatText(message.content)
+    }));
+  await chrome.runtime.sendMessage({
+    action: 'SAVE_COURSE',
+    data: currentCourse
+  });
+}
+
+function sanitizeChatText(text) {
+  let cleaned = text || '';
+
+  cleaned = cleaned
+    .replace(/\s*[\[(]chunk[^\])]*[\])]/gi, '')
+    .replace(/\b(?:sources?|citations?)\s*:\s*chunk(?:[_-][a-z0-9]+)+(?:\s*,\s*chunk(?:[_-][a-z0-9]+)+)*/gi, '')
+    .replace(/\s*,?\s*chunk(?:[_-][a-z0-9]+)+(?:\s*,\s*chunk(?:[_-][a-z0-9]+)+)*/gi, '')
+    .replace(/\b(?:sources?|citations?|references?|evidence|context)\s*:\s*(?:raw|supporting|retrieved|structured|recent|student)[^.\n]*/gi, '');
+
+  INTERNAL_RESPONSE_LABELS.forEach((label) => {
+    const pattern = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    cleaned = cleaned
+      .replace(new RegExp(`\\s*[\\[(]${pattern}[^\\])]*[\\])]`, 'gi'), '')
+      .replace(new RegExp(`([.!?]\\s+)${pattern}(?=$|[.!?])`, 'g'), '$1')
+      .replace(new RegExp(`(^|\\n)\\s*${pattern}(?::)?\\s*`, 'gm'), '$1');
+  });
+
+  return cleaned
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\[\s*\]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 /**
  * Send chat message
  */
@@ -995,6 +1190,9 @@ async function sendChatMessage() {
   const welcome = elements.chatMessages.querySelector('.chat-welcome');
   if (welcome) welcome.style.display = 'none';
 
+  chatHistory.push({ role: 'user', content: question });
+  chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+  await persistChatHistory();
   addChatMessage(question, 'user');
   const loadingId = addChatMessage('Thinking...', 'assistant');
 
@@ -1003,14 +1201,19 @@ async function sendChatMessage() {
       action: 'CHAT',
       data: {
         question,
-        courseId: currentCourse.id
+        courseId: currentCourse.id,
+        history: chatHistory
       }
     });
 
     document.getElementById(loadingId)?.remove();
 
     if (response.success) {
-      addChatMessage(response.data.answer || 'I couldn\'t find an answer.', 'assistant');
+      const answer = sanitizeChatText(response.data.answer || 'I couldn\'t find an answer.');
+      chatHistory.push({ role: 'assistant', content: answer });
+      chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY);
+      addChatMessage(answer, 'assistant');
+      await persistChatHistory();
     } else {
       addChatMessage('Sorry, I encountered an error. Please try again.', 'assistant');
     }
@@ -1028,7 +1231,7 @@ function addChatMessage(text, type) {
   const div = document.createElement('div');
   div.id = id;
   div.className = `chat-message ${type}`;
-  div.innerHTML = text;
+  div.textContent = sanitizeChatText(text);
   
   elements.chatMessages.appendChild(div);
   elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;

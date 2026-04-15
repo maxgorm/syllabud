@@ -406,7 +406,7 @@ Return ONLY the fixed JSON, no explanations.`;
  * Chat about syllabus
  */
 async function chat(payload) {
-  const { question, chunks, syllabus, grades, history } = payload;
+  const { question, chunks, syllabus, grades, history, rawTextExcerpt } = payload;
   
   if (!question) {
     throw new Error('Question is required');
@@ -416,74 +416,109 @@ async function chat(payload) {
   let context = '';
   
   if (chunks && chunks.length > 0) {
-    context += 'RELEVANT SYLLABUS SECTIONS:\n';
-    chunks.forEach(chunk => {
-      context += `[${chunk.id}]: ${chunk.text}\n\n`;
+    context += 'RETRIEVED SYLLABUS EVIDENCE:\n';
+    chunks.forEach((chunk) => {
+      context += `[${chunk.id}] ${chunk.text}\n\n`;
     });
   }
   
   if (syllabus) {
-    context += '\nCOURSE INFORMATION:\n';
+    context += '\nSTRUCTURED COURSE DATA:\n';
     context += JSON.stringify(syllabus, null, 2);
   }
   
   if (grades && Object.keys(grades).length > 0) {
-    context += '\n\nSTUDENT\'S CURRENT GRADES:\n';
+    context += '\n\nSTUDENT CURRENT GRADES:\n';
     context += JSON.stringify(grades, null, 2);
+  }
+
+  if (rawTextExcerpt) {
+    context += `\n\nSUPPORTING SYLLABUS TEXT:\n${rawTextExcerpt}`;
   }
   
   // Build conversation history
   let historyText = '';
   if (history && history.length > 0) {
-    historyText = '\nPREVIOUS CONVERSATION:\n';
-    history.forEach(msg => {
-      historyText += `${msg.role}: ${msg.content}\n`;
+    historyText = '\nRECENT CONVERSATION:\n';
+    history.forEach((msg) => {
+      historyText += `${msg.role.toUpperCase()}: ${msg.content}\n`;
     });
   }
   
-  const prompt = `You are a helpful syllabus assistant. Answer questions about the course based on the provided context.
+  const prompt = `You are SyllaBud, an assistant that answers questions about a single course syllabus.
 
-RULES:
-1. Only answer based on the provided syllabus information
-2. If information is not in the context, say "I don't have that information in the syllabus"
-3. Cite your sources using [chunk_id] format when referencing specific sections
-4. Be concise but helpful
-5. If asked about grades, use the student's current grades if provided
+Use the context in this order:
+1. Structured course data for the overall answer.
+2. Retrieved syllabus evidence for exact details, wording, dates, and policy grounding.
+3. Recent conversation only to resolve follow-up references like "that", "it", or "those assignments".
+
+Answering rules:
+1. Never make up facts that are not supported by the context.
+2. If the answer is missing or ambiguous, say so plainly: "I don't have that information in the syllabus."
+3. Do not include chunk ids, bracketed references, or source tags in the final answer.
+4. If the user asks about deadlines, include the exact due date from context when available.
+5. If the user asks about grades or weighting, use the provided student grades and grading data.
+6. Keep the answer concise, but include the direct answer first.
+7. If the syllabus appears to conflict with itself, point out the conflict instead of choosing one version.
 
 ${context}
 ${historyText}
 
 STUDENT QUESTION: ${question}
 
-Provide a helpful, accurate response based on the syllabus information above.`;
+Provide the best grounded answer you can.`;
 
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
   const result = await model.generateContent(prompt);
   const response = await result.response;
   const responseText = response.text();
+  const cleanedResponseText = stripChunkReferences(responseText || '');
   
   return {
-    answer: responseText || 'I could not generate a response.',
-    citations: extractCitations(responseText || '')
+    answer: cleanedResponseText || 'I could not generate a response.',
+    citations: []
   };
 }
 
 /**
- * Extract citation references from response
+ * Remove internal retrieval markers from model output
  */
-function extractCitations(text) {
-  const citations = [];
-  const regex = /\[chunk_\d+\]/g;
-  let match;
-  
-  while ((match = regex.exec(text)) !== null) {
-    const citation = match[0].replace(/[\[\]]/g, '');
-    if (!citations.includes(citation)) {
-      citations.push(citation);
-    }
-  }
-  
-  return citations;
+const INTERNAL_RESPONSE_LABELS = [
+  'RAW SYLLABUS EXCERPT',
+  'SUPPORTING SYLLABUS TEXT',
+  'RETRIEVED SYLLABUS EVIDENCE',
+  'STRUCTURED COURSE DATA',
+  'RECENT CONVERSATION',
+  'STUDENT CURRENT GRADES'
+];
+
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripChunkReferences(text) {
+  let cleaned = text || '';
+
+  cleaned = cleaned
+    .replace(/\s*[\[(]chunk[^\])]*[\])]/gi, '')
+    .replace(/\b(?:sources?|citations?)\s*:\s*chunk(?:[_-][a-z0-9]+)+(?:\s*,\s*chunk(?:[_-][a-z0-9]+)+)*/gi, '')
+    .replace(/\s*,?\s*chunk(?:[_-][a-z0-9]+)+(?:\s*,\s*chunk(?:[_-][a-z0-9]+)+)*/gi, '')
+    .replace(/\b(?:sources?|citations?|references?|evidence|context)\s*:\s*(?:raw|supporting|retrieved|structured|recent|student)[^.\n]*/gi, '');
+
+  INTERNAL_RESPONSE_LABELS.forEach((label) => {
+    const pattern = escapeRegExp(label).replace(/\s+/g, '\\s+');
+    cleaned = cleaned
+      .replace(new RegExp(`\\s*[\\[(]${pattern}[^\\])]*[\\])]`, 'gi'), '')
+      .replace(new RegExp(`([.!?]\\s+)${pattern}(?=$|[.!?])`, 'g'), '$1')
+      .replace(new RegExp(`(^|\\n)\\s*${pattern}(?::)?\\s*`, 'gm'), '$1');
+  });
+
+  return cleaned
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\[\s*\]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 /**

@@ -316,9 +316,11 @@
         ...analysis.data,
         raw: {
           extractedText,
-          chunks
+          chunks,
+          sourceUrl: url
         },
         userGrades: {},
+        chatHistory: [],
         settings: {
           treatUnfilledAs: 100,
           ics: { defaultReminderMinutes: 1440 }

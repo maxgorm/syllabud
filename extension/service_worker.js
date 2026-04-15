@@ -445,11 +445,163 @@ async function handleUpdateGrades(data) {
   return { success: true, data: courses[courseIndex] };
 }
 
+function tokenizeForChat(text) {
+  const stopWords = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'what', 'when', 'where', 'which', 'about', 'have', 'your', 'does', 'into']);
+
+  return (text || '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopWords.has(word));
+}
+
+function extractQueryPhrases(question) {
+  const phrases = [];
+  const patterns = [
+    /what(?:'s| is) (?:the )?(.+?)(?:\?|$)/i,
+    /when(?:'s| is) (.+?)(?:\?|$)/i,
+    /how (?:is|are|do|does) (.+?)(?:\?|$)/i,
+    /(.+?) policy/i,
+    /(.+?) grade/i,
+    /(.+?) due/i
+  ];
+
+  patterns.forEach((pattern) => {
+    const match = question.match(pattern);
+    if (match?.[1]) {
+      phrases.push(match[1].trim().toLowerCase());
+    }
+  });
+
+  return phrases;
+}
+
+function createFallbackChunks(text, maxChars = 1200, overlapWords = 20) {
+  const cleanedText = (text || '').replace(/\s+/g, ' ').trim();
+  if (!cleanedText) return [];
+
+  const sentences = cleanedText.split(/(?<=[.!?])\s+/);
+  const chunks = [];
+  let currentChunk = '';
+
+  sentences.forEach((sentence) => {
+    if ((currentChunk + ' ' + sentence).trim().length > maxChars && currentChunk) {
+      chunks.push({ id: `chunk_${chunks.length}`, text: currentChunk.trim() });
+      const overlap = currentChunk.split(' ').slice(-overlapWords).join(' ');
+      currentChunk = `${overlap} ${sentence}`.trim();
+    } else {
+      currentChunk = `${currentChunk} ${sentence}`.trim();
+    }
+  });
+
+  if (currentChunk) {
+    chunks.push({ id: `chunk_${chunks.length}`, text: currentChunk.trim() });
+  }
+
+  return chunks;
+}
+
+function scoreChunk(chunkText, queryTokens, queryPhrases) {
+  const normalized = (chunkText || '').toLowerCase();
+  const chunkTokens = tokenizeForChat(normalized);
+
+  let score = 0;
+
+  queryTokens.forEach((token) => {
+    chunkTokens.forEach((chunkToken) => {
+      if (chunkToken === token) {
+        score += 4;
+      } else if (chunkToken.includes(token) || token.includes(chunkToken)) {
+        score += 2;
+      }
+    });
+  });
+
+  queryPhrases.forEach((phrase) => {
+    if (phrase && normalized.includes(phrase)) {
+      score += 8;
+    }
+  });
+
+  if (/\b(policy|late|attendance|exam|midterm|final|grade|weight|assignment|due)\b/.test(normalized)) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function buildRelevantChunks(course, question, limit = 8) {
+  const rawChunks = course.raw?.chunks?.length
+    ? course.raw.chunks
+    : createFallbackChunks(course.raw?.extractedText || '');
+  const queryTokens = tokenizeForChat(question);
+  const queryPhrases = extractQueryPhrases(question);
+
+  const scoredChunks = rawChunks
+    .map((chunk) => ({
+      ...chunk,
+      score: scoreChunk(chunk.text, queryTokens, queryPhrases)
+    }))
+    .filter((chunk) => chunk.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  const syntheticChunks = [];
+
+  Object.entries(course.policies || {}).forEach(([key, value]) => {
+    if (value) {
+      syntheticChunks.push({
+        id: `chunk_policy_${key}`,
+        text: `${key.replace(/_/g, ' ')}: ${value}`,
+        score: scoreChunk(value, queryTokens, queryPhrases) + 3
+      });
+    }
+  });
+
+  (course.assignments || []).forEach((assignment) => {
+    const description = [assignment.title, assignment.category, assignment.description, assignment.dueDate, assignment.dueTime]
+      .filter(Boolean)
+      .join(' | ');
+    syntheticChunks.push({
+      id: `chunk_assignment_${assignment.id || assignment.title || syntheticChunks.length}`,
+      text: description,
+      score: scoreChunk(description, queryTokens, queryPhrases) + 2
+    });
+  });
+
+  const combined = [...scoredChunks, ...syntheticChunks]
+    .filter((chunk) => chunk.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const seen = new Set();
+  return combined.filter((chunk) => {
+    if (seen.has(chunk.id)) return false;
+    seen.add(chunk.id);
+    return true;
+  }).slice(0, limit);
+}
+
+function buildCourseSummary(course) {
+  const assignments = [...(course.assignments || [])]
+    .filter((assignment) => assignment.dueDate)
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+    .slice(0, 8);
+
+  return {
+    course: course.course,
+    grading: course.grading,
+    policies: course.policies,
+    assignments: course.assignments,
+    upcomingAssignments: assignments,
+    sourceUrl: course.raw?.sourceUrl || course.course?.source?.url || null
+  };
+}
+
 /**
  * Handle chat request
  */
 async function handleChat(data) {
-  const { question, courseId } = data;
+  const { question, courseId, history = [] } = data;
   const settings = await StorageHelper.getSettings();
   
   // Get course data
@@ -460,24 +612,10 @@ async function handleChat(data) {
     throw new Error('Course not found');
   }
   
-  // Simple local retrieval (TF-IDF style)
-  const chunks = course.raw?.chunks || [];
-  const queryTokens = question.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  
-  // Score chunks by keyword overlap
-  const scoredChunks = chunks.map(chunk => {
-    const chunkTokens = chunk.text.toLowerCase().split(/\s+/);
-    let score = 0;
-    for (const qt of queryTokens) {
-      for (const ct of chunkTokens) {
-        if (ct.includes(qt) || qt.includes(ct)) score++;
-      }
-    }
-    return { ...chunk, score };
-  });
-  
-  scoredChunks.sort((a, b) => b.score - a.score);
-  const relevantChunks = scoredChunks.slice(0, 5);
+  const relevantChunks = buildRelevantChunks(course, question);
+  const conversationHistory = Array.isArray(history) && history.length > 0
+    ? history.slice(-10)
+    : (course.chatHistory || []).slice(-10);
   
   // Call backend for chat
   const response = await fetch(`${settings.backendUrl}/gemini`, {
@@ -488,13 +626,10 @@ async function handleChat(data) {
       payload: {
         question,
         chunks: relevantChunks,
-        syllabus: {
-          course: course.course,
-          grading: course.grading,
-          policies: course.policies,
-          assignments: course.assignments
-        },
-        grades: course.userGrades
+        syllabus: buildCourseSummary(course),
+        grades: course.userGrades,
+        history: conversationHistory,
+        rawTextExcerpt: (course.raw?.extractedText || '').slice(0, 12000)
       }
     })
   });
