@@ -10,6 +10,8 @@ const STORAGE_KEYS = {
   SETTINGS: 'syllabud_settings'
 };
 
+const DEFAULT_BACKEND_URL = 'https://syllabud-worker.gabepush.workers.dev';
+
 /**
  * Default settings for new installations
  */
@@ -18,7 +20,8 @@ const DEFAULT_SETTINGS = {
   ics: {
     defaultReminderMinutes: 1440 // 1 day
   },
-  backendUrl: 'http://localhost:3000'
+  // Change this to your deployed Worker URL for production builds.
+  backendUrl: DEFAULT_BACKEND_URL
 };
 
 /**

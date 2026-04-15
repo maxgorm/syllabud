@@ -157,8 +157,7 @@ Main UI logic for:
 ```javascript
 {
   unfilledDefault: 100,    // Treat ungraded as this %
-  reminderDays: 1,         // ICS alarm days before
-  backendUrl: "http://localhost:3000"
+  reminderDays: 1          // ICS alarm days before
 }
 ```
 

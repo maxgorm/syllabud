@@ -40,9 +40,17 @@ SyllaBud automatically analyzes course syllabi and provides:
 ### Prerequisites
 - Google Chrome (or Chromium-based browser)
 - Node.js 18+ (for backend)
-- Google AI Studio API key ([Get one free](https://makersuite.google.com/app/apikey))
+- For `backend/`: a Google AI Studio Gemini API key
+- For `workers/`: a Google Cloud Vertex AI service account
 
 ### 1. Set Up Backend
+
+Choose one backend:
+
+- `backend/` for the local Node/Express server
+- `workers/` for a deployed Cloudflare Worker that keeps Vertex AI credentials secret and can bill through Google Cloud
+
+#### Local Node backend
 
 ```bash
 cd backend
@@ -61,6 +69,24 @@ npm start
 ```
 
 The backend will start on `http://localhost:3000`.
+
+#### Cloudflare Worker backend
+
+```bash
+cd workers
+npm install
+npx wrangler login
+npx wrangler secret put GCP_SERVICE_ACCOUNT_JSON
+npx wrangler deploy
+```
+
+Paste the full Google Cloud service-account JSON when prompted. The deployed Worker will use Vertex AI and keep those credentials private in Cloudflare secrets.
+
+The extension already defaults to:
+
+```text
+https://syllabud-worker.gabepush.workers.dev
+```
 
 ### 2. Install Chrome Extension
 
@@ -121,9 +147,8 @@ Click the ⚙️ icon in the extension footer:
 |---------|-------------|---------|
 | Treat unfilled as | Default grade for ungraded items | 100% |
 | Default reminder | ICS alarm before due date | 1 day |
-| Backend URL | Server endpoint | http://localhost:3000 |
 
-### Backend Environment Variables
+### Local Node Backend Environment Variables
 
 ```env
 # Required
@@ -262,7 +287,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 - **Extension:** Chrome Manifest V3, vanilla JavaScript
 - **Backend:** Node.js, Express, @google/genai
-- **AI:** Gemini 2.0 Flash (via Google AI Studio)
+- **AI:** Gemini via Vertex AI on Cloudflare Workers or via Google AI Studio on the local Node backend
 - **Storage:** chrome.storage.local
 
 ## License
